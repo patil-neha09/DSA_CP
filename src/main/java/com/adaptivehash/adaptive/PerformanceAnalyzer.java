@@ -19,7 +19,7 @@ public class PerformanceAnalyzer {
      * @return true if clustering / degradation is detected, false otherwise
      */
     public boolean isClusteringDetected(List<OperationMetrics> recentMetrics, double probeThreshold) {
-        if (recentMetrics == null || recentMetrics.isEmpty()) {
+        if (recentMetrics == null || recentMetrics.size() < 3) {
             return false;
         }
 
@@ -34,14 +34,61 @@ public class PerformanceAnalyzer {
 
     /**
      * Calculates the primary clustering factor across the hash table slots.
-     * Evaluates contiguous clusters of occupied slots.
+     * Evaluates contiguous clusters of occupied slots using weighted mean cluster length.
      *
      * @param table the hash table to analyze
      * @return calculated cluster index score
      */
     public double calculateClusterFactor(HashTable<?, ?> table) {
-        // Skeleton method: Clustering calculation algorithm
-        return 0.0;
+        if (table == null || table.isEmpty() || table.capacity() == 0) {
+            return 0.0;
+        }
+        int capacity = table.capacity();
+        HashTable.Entry<?, ?>[] entries = table.getTable();
+
+        // If entire table is occupied
+        if (table.size() == capacity) {
+            return (double) capacity;
+        }
+
+        // Find a non-occupied slot to avoid splitting circular clusters
+        int start = -1;
+        for (int i = 0; i < capacity; i++) {
+            HashTable.Entry<?, ?> entry = entries[i];
+            if (entry == null || entry.isDeleted()) {
+                start = i;
+                break;
+            }
+        }
+        if (start == -1) {
+            return (double) capacity;
+        }
+
+        long sumSquaredClusterLengths = 0;
+        int totalOccupied = 0;
+        int currentCluster = 0;
+
+        for (int step = 0; step < capacity; step++) {
+            int idx = (start + 1 + step) % capacity;
+            HashTable.Entry<?, ?> entry = entries[idx];
+            if (entry != null && !entry.isDeleted()) {
+                currentCluster++;
+                totalOccupied++;
+            } else {
+                if (currentCluster > 0) {
+                    sumSquaredClusterLengths += (long) currentCluster * currentCluster;
+                    currentCluster = 0;
+                }
+            }
+        }
+        if (currentCluster > 0) {
+            sumSquaredClusterLengths += (long) currentCluster * currentCluster;
+        }
+
+        if (totalOccupied == 0) {
+            return 0.0;
+        }
+        return (double) sumSquaredClusterLengths / totalOccupied;
     }
 
     /**
@@ -52,6 +99,9 @@ public class PerformanceAnalyzer {
      * @return true if collision rate is beyond threshold
      */
     public boolean isCollisionRateCritical(Statistics statistics, double collisionRateThreshold) {
-        return statistics != null && statistics.getCollisionRate() > collisionRateThreshold;
+        if (statistics == null || statistics.getTotalOperations() < 5) {
+            return false;
+        }
+        return statistics.getCollisionRate() > collisionRateThreshold;
     }
 }

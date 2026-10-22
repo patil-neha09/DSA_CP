@@ -74,6 +74,16 @@
                     </archive>
                 </configuration>
             </plugin>
+
+            <!-- Exec Maven Plugin for running the main application -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <mainClass>com.adaptivehash.Main</mainClass>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

@@ -12,8 +12,8 @@ import com.adaptivehash.statistics.Statistics;
 import java.util.Optional;
 
 /**
- * Controller coordinating operations between the Java Swing UI, the Hash Table Engine,
- * the Adaptive Decision Engine, Statistics tracker, and Operation History.
+ * Controller coordinating operations between the Java Swing UI / CLI menu,
+ * the Hash Table Engine, the Adaptive Decision Engine, Statistics tracker, and Operation History.
  */
 public class HashController {
 
@@ -27,19 +27,28 @@ public class HashController {
     }
 
     public HashController(int initialCapacity, ProbingStrategy initialStrategy) {
-        // Default simple hash function for strings
+        // Hash function supporting both integer-parseable keys and arbitrary strings
         HashFunction<String> hashFunction = new HashFunction<>() {
             @Override
             public int hash(String key, int capacity) {
-                if (key == null || capacity <= 0) return 0;
-                return Math.floorMod(key.hashCode(), capacity);
+                if (key == null) return 0;
+                try {
+                    int intVal = Integer.parseInt(key);
+                    return HashFunction.computePrimaryHash(intVal, capacity);
+                } catch (NumberFormatException e) {
+                    return HashFunction.computePrimaryHash(key, capacity);
+                }
             }
 
             @Override
             public int secondaryHash(String key, int capacity) {
-                if (key == null || capacity <= 0) return 1;
-                int step = 7 - Math.floorMod(Math.abs(key.hashCode()), 7);
-                return step == 0 ? 1 : step;
+                if (key == null) return 1;
+                try {
+                    int intVal = Integer.parseInt(key);
+                    return HashFunction.computeSecondaryHash(intVal, capacity);
+                } catch (NumberFormatException e) {
+                    return HashFunction.computeSecondaryHash(key, capacity);
+                }
             }
         };
 
@@ -67,23 +76,37 @@ public class HashController {
     }
 
     /**
-     * Executes a search operation.
+     * Executes a search operation and records metrics.
      *
      * @param key the key to search for
      * @return Optional containing the value if present
      */
     public Optional<String> search(String key) {
-        return hashTable.search(key);
+        Optional<String> result = hashTable.search(key);
+        OperationMetrics metrics = hashTable.getLastOperationMetrics();
+        if (metrics != null) {
+            statistics.recordOperation(metrics);
+            history.record(metrics);
+            evaluateAdaptation();
+        }
+        return result;
     }
 
     /**
-     * Executes a delete operation.
+     * Executes a delete operation and records metrics.
      *
      * @param key the key to delete
      * @return true if deleted, false otherwise
      */
     public boolean delete(String key) {
-        return hashTable.delete(key);
+        boolean deleted = hashTable.delete(key);
+        OperationMetrics metrics = hashTable.getLastOperationMetrics();
+        if (metrics != null) {
+            statistics.recordOperation(metrics);
+            history.record(metrics);
+            evaluateAdaptation();
+        }
+        return deleted;
     }
 
     /**
@@ -100,12 +123,15 @@ public class HashController {
     }
 
     /**
-     * Switches the active probing strategy and triggers necessary rehash.
+     * Switches the active probing strategy and triggers rehash into the new strategy.
      *
      * @param newStrategy the new probing strategy
      */
     public void switchProbingStrategy(ProbingStrategy newStrategy) {
-        hashTable.setProbingStrategy(newStrategy);
+        if (newStrategy != null && !newStrategy.getName().equals(hashTable.getProbingStrategy().getName())) {
+            hashTable.setProbingStrategy(newStrategy);
+            hashTable.rehash(hashTable.capacity());
+        }
     }
 
     public void clear() {

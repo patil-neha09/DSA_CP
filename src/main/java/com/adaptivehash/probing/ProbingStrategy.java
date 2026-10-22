@@ -22,4 +22,15 @@ public interface ProbingStrategy {
      * @return the computed table slot index within [0, capacity - 1]
      */
     int computeProbeIndex(int baseHash, int probeAttempt, int capacity, Object key);
+
+    /**
+     * Maximum number of probe attempts permitted before terminating search/insert.
+     * Guaranteed upper bound to prevent infinite loops.
+     *
+     * @param capacity current table capacity
+     * @return maximum probe attempts
+     */
+    default int getMaxProbes(int capacity) {
+        return Math.max(1, capacity);
+    }
 }

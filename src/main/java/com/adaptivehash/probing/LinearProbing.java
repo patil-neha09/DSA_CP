@@ -14,7 +14,10 @@ public class LinearProbing implements ProbingStrategy {
 
     @Override
     public int computeProbeIndex(int baseHash, int probeAttempt, int capacity, Object key) {
-        // Skeleton method: Probe calculation
-        return (baseHash + probeAttempt) % capacity;
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("Capacity must be positive, got: " + capacity);
+        }
+        long index = (long) baseHash + probeAttempt;
+        return (int) Math.floorMod(index, (long) capacity);
     }
 }

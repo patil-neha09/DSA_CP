@@ -2,7 +2,10 @@ package com.adaptivehash.history;
 
 import com.adaptivehash.statistics.OperationMetrics;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -65,8 +68,36 @@ public class OperationHistory {
      * @return true if export succeeds, false otherwise
      */
     public synchronized boolean exportToCsv(File targetFile) {
-        // Skeleton method: CSV serialization logic will be implemented here
-        return false;
+        if (targetFile == null) {
+            return false;
+        }
+
+        File parent = targetFile.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(targetFile))) {
+            writer.write("Timestamp,Operation,Key,InitialHash,FinalSlot,Probes,Collisions,Success,DurationNanos");
+            writer.newLine();
+
+            for (OperationMetrics metric : history) {
+                writer.write(String.format("%d,%s,%s,%d,%d,%d,%d,%b,%d",
+                        metric.getTimestampMillis(),
+                        metric.getOperationType(),
+                        metric.getKey(),
+                        metric.getInitialHash(),
+                        metric.getFinalSlotIndex(),
+                        metric.getProbeCount(),
+                        metric.getCollisionCount(),
+                        metric.isSuccessful(),
+                        metric.getExecutionTimeNanos()));
+                writer.newLine();
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     /**

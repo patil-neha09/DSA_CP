@@ -50,14 +50,15 @@ public class AdaptiveDecisionEngine {
     public Optional<ProbingStrategy> evaluateAndRecommend(ProbingStrategy currentStrategy,
                                                           Statistics stats,
                                                           List<OperationMetrics> recentHistory) {
-        if (!autoAdaptEnabled || currentStrategy == null) {
+        if (!autoAdaptEnabled || currentStrategy == null || stats == null || stats.getTotalOperations() < 5) {
             return Optional.empty();
         }
 
         boolean highCollisions = analyzer.isCollisionRateCritical(stats, collisionRateThreshold);
         boolean clustering = analyzer.isClusteringDetected(recentHistory, probeThreshold);
+        boolean maxProbesExceeded = stats.getMaxProbesEncountered() >= maxProbeThreshold;
 
-        if (highCollisions || clustering) {
+        if (highCollisions || clustering || maxProbesExceeded) {
             if (currentStrategy instanceof LinearProbing) {
                 return Optional.of(new QuadraticProbing());
             } else if (currentStrategy instanceof QuadraticProbing) {
