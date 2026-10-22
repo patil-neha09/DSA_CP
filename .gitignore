@@ -1,0 +1,31 @@
+# Target directory built by Maven
+target/
+
+# IntelliJ IDEA project files
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse project files
+.project
+.classpath
+.settings/
+
+# Visual Studio Code
+.vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Log and temporary files
+*.log
+*.tmp
+*.bak
+
+# Runtime generated data files (preserve directory via .gitkeep)
+data/*.csv
+!data/.gitkeep
